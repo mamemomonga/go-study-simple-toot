@@ -11,6 +11,7 @@ dist: $(SRCS)
 	GOOS=linux   GOARCH=amd64 sh -ec 'cd src; $(GOBUILD)'
 	GOOS=linux   GOARCH=arm   sh -ec 'cd src; $(GOBUILD)'
 	GOOS=windows GOARCH=amd64 sh -ec 'cd src; $(GOBUILD)'
+	mv dist/$@/$(NAME)-windows-amd64 dist/$@/$(NAME)-windows-amd64.exe
 
 clean:
 	rm -rf dist
