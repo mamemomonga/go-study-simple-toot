@@ -1,4 +1,4 @@
-NAME     := toottool
+NAME     := simple-toot
 VERSION  := v0.0.1
 REVISION := $(shell git rev-parse --short HEAD)
 SRCS     := $(shell find src -type f -name '*.go')
