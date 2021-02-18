@@ -1,4 +1,3 @@
-/dist
-/var
-/etc/config.yaml
+config.yaml
+servers.json
 *.swp

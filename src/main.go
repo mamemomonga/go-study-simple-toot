@@ -1,94 +1,63 @@
 package main
 
 import (
-	"./config"
-	"./don"
-	"./store"
-	"fmt"
-	"github.com/comail/colog"
 	"log"
-	"os"
-	//	"github.com/davecgh/go-spew/spew"
-)
 
-var (
-	Version  string
-	Revision string
+	"flag"
+
+	"path/filepath"
+
+	//	"github.com/davecgh/go-spew/spew"
+	"github.com/schollz/jsonstore"
+
+	"os"
+
+	"github.com/mamemomonga/go-study-simple-toot/src/don"
 )
 
 func main() {
-	os.Exit(run(os.Args[1:]))
-}
+	// configファイル名を取得
+	var configFilename string
+	flag.StringVar(&configFilename, "c", "", "Config File")
+	flag.Parse()
 
-func run(args []string) int {
+	// configファイルロード
+	cfg, err := configLoad(configFilename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// spew.Dump(cfg)
 
-	// colog 設定
-	if Version == "" {
-		colog.SetDefaultLevel(colog.LDebug)
-		colog.SetMinLevel(colog.LTrace)
-		colog.SetFormatter(&colog.StdFormatter{
-			Colors: true,
-			Flag:   log.Ldate | log.Ltime | log.Lshortfile,
-		})
+	// configファイルと同じフォルダにservers.jsonを置く
+	serversFilename := filepath.Dir(configFilename) + "/servers.json"
+
+	// serversファイルのロードもしくは新規作成
+	var servers *jsonstore.JSONStore
+	if _, err := os.Stat(serversFilename); err == nil {
+		servers, err = jsonstore.Open(serversFilename)
+		if err != nil {
+			log.Fatal(err)
+		}
 	} else {
-		colog.SetDefaultLevel(colog.LDebug)
-		colog.SetMinLevel(colog.LInfo)
-		colog.SetFormatter(&colog.StdFormatter{
-			Colors: true,
-			Flag:   log.Ldate | log.Ltime | log.Lshortfile,
-		})
-	}
-	colog.Register()
-
-	// スタートアップ
-	log.Printf("info: simple-toot version %s", Version)
-
-	if len(args) == 0 {
-		usage()
-		return 1
+		servers = new(jsonstore.JSONStore)
 	}
 
-	var err error
+	// donインスタンス作成
+	don := don.New(don.Config{
+		ClientName: cfg.ClientName,
+		UserLogin:  cfg.Mastodon,
+		Store:      servers,
+	})
 
-	// config 読込
-	var cnf config.Config
-	cnf, err = config.Load(os.Args[1])
-	if err != nil {
-		log.Printf("alert: %s", err)
-		return 1
-	}
-
-	// data読書
-	var stor *store.Store
-	stor, err = store.NewStore(cnf.DataFile)
-	if err != nil {
-		log.Print("alert: %s", err)
-		return 1
-	}
-
-	//	log.Printf("--- CONFIG---")
-	//	spew.Dump(cnf)
-	//	log.Printf("--- STORE---")
-	//	spew.Dump(stor)
-
-	// マストドン
-	var dn *don.Don
-	dn, err = don.NewDon(&cnf, stor)
-	if err != nil {
-		log.Print("alert: %s", err)
-		return 1
+	// アプリ登録
+	if save, err := don.Register(); err == nil {
+		if save {
+			jsonstore.Save(servers, serversFilename)
+		}
+	} else {
+		log.Fatal(err)
 	}
 
 	// トゥート
-	err = dn.Toot(cnf.Message)
-	if err != nil {
-		log.Print("alert: %s", err)
-		return 1
-	}
-
-	return 0
-}
-
-func usage() {
-	fmt.Printf("\n\n  USAGE: %s config.yaml\n\n", os.Args[0])
+	don.Toot("テストだぬ〜ん")
 }
